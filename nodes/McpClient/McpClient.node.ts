@@ -345,18 +345,19 @@ export class McpClient implements INodeType {
 						: Array.isArray(rawTools?.tools)
 						? rawTools.tools
 						: Object.values(rawTools?.tools || {});
-
+				
 					if (!tools.length) {
 						throw new NodeOperationError(this.getNode(), 'No tools found from MCP client');
 					}
-
+				
 					const aiTools = tools.map((tool: any) => {
+						// Build the input schema using Zod
 						const paramSchema = tool.inputSchema?.properties
 							? z.object(
 									Object.entries(tool.inputSchema.properties).reduce(
 										(acc: any, [key, prop]: [string, any]) => {
 											let zodType: z.ZodType;
-
+				
 											switch (prop.type) {
 												case 'string':
 													zodType = z.string();
@@ -387,15 +388,15 @@ export class McpClient implements INodeType {
 												default:
 													zodType = z.any();
 											}
-
+				
 											if (prop.description) {
 												zodType = zodType.describe(prop.description);
 											}
-
+				
 											if (!tool.inputSchema?.required?.includes(key)) {
 												zodType = zodType.optional();
 											}
-
+				
 											return {
 												...acc,
 												[key]: zodType,
@@ -405,10 +406,20 @@ export class McpClient implements INodeType {
 									),
 							  )
 							: z.object({});
-
+				
+						// Combine tool's original description with each parameter's description
+						let toolDescription = tool.description || `Execute the ${tool.name} tool`;
+						if (tool.inputSchema?.properties) {
+							for (const [paramName, paramDef] of Object.entries(tool.inputSchema.properties) as [string, any][]) {
+								if (paramDef.description) {
+									toolDescription += `\n- ${paramName}: ${paramDef.description}`;
+								}
+							}
+						}
+				
 						return new DynamicStructuredTool({
 							name: tool.name,
-							description: tool.description || `Execute the ${tool.name} tool`,
+							description: toolDescription,
 							schema: paramSchema,
 							func: async (params) => {
 								try {
@@ -416,7 +427,7 @@ export class McpClient implements INodeType {
 										name: tool.name,
 										arguments: params,
 									});
-
+				
 									return typeof result === 'object' ? JSON.stringify(result) : String(result);
 								} catch (error) {
 									throw new NodeOperationError(
@@ -427,7 +438,7 @@ export class McpClient implements INodeType {
 							},
 						});
 					});
-
+				
 					returnData.push({
 						json: {
 							tools: aiTools.map((t: DynamicStructuredTool) => ({
@@ -437,8 +448,12 @@ export class McpClient implements INodeType {
 							})),
 						},
 					});
+				
 					break;
 				}
+				
+				
+				
 
 				case 'executeTool': {
 					const toolName = this.getNodeParameter('toolName', 0) as string;
