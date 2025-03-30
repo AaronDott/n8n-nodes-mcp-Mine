@@ -19,7 +19,7 @@ declare const process: {
 
 export class McpClient implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'MCP Client Dott',
+		displayName: 'MCP Client',
 		name: 'mcpClient',
 		icon: 'file:mcpClient.svg',
 		group: ['transform'],
@@ -27,7 +27,7 @@ export class McpClient implements INodeType {
 		subtitle: '={{$parameter["operation"]}}',
 		description: 'Use MCP client',
 		defaults: {
-			name: 'MCP Client Dott',
+			name: 'MCP Client',
 		},
 		// @ts-ignore - node-class-description-outputs-wrong
 		inputs: [{ type: NodeConnectionType.Main }],
